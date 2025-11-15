@@ -1,0 +1,26 @@
+
+> placify-backend@1.0.0 start
+> node server.js
+
+≡ƒöî Connection attempt 1/3...
+≡ƒöä Attempting to connect to MongoDB...
+   URI: mongodb+srv://[credentials]@cluster0.gnc7fnj.mongodb.net/placify
+≡ƒôí Routes registered:
+   POST   /api/auth/register
+   POST   /api/auth/login
+   GET    /api/auth/me
+   GET    /api/questions
+   GET    /api/blogs
+   POST   /api/contact
+   POST   /api/compiler/execute
+   GET    /api/health
+(node:8472) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+
+≡ƒÜÇ Placify Backend Server Started
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+≡ƒîÉ Server URL: http://localhost:5000
+≡ƒôì API Base: http://localhost:5000/api
+≡ƒôï Health Check: http://localhost:5000/api/health
+ΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöüΓöü
+

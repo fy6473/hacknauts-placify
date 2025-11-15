@@ -39,6 +39,14 @@ function Header() {
           <a href="/contact" className="text-gray-700 hover:text-blue-600 font-semibold transition">
             Contact
           </a>
+          {token && user && (
+            <button
+              onClick={() => navigate('/technical')}
+              className="text-white bg-purple-600 hover:bg-purple-700 font-semibold px-4 py-2 rounded-lg transition"
+            >
+              💻 Coding Test
+            </button>
+          )}
         </nav>
 
         {/* Auth Buttons */}

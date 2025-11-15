@@ -1,8 +1,21 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
+import { registerLocalUser, loginLocalUser, getLocalUser, generateToken, verifyToken } from '../services/localAuth.js';
 
 const router = express.Router();
+
+// Middleware to check database connection
+const checkDbConnection = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      message: 'Database is not connected. Please try again in a moment.',
+      error: 'DATABASE_UNAVAILABLE'
+    });
+  }
+  next();
+};
 
 // Register
 router.post('/register', async (req, res) => {
@@ -14,35 +27,49 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Please provide all required fields' });
     }
 
-    // Check if user already exists
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: 'User already exists' });
+    let token, user;
+    const isMongoConnected = mongoose.connection.readyState === 1;
+
+    if (isMongoConnected) {
+      // Use MongoDB
+      let dbUser = await User.findOne({ email });
+      if (dbUser) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+
+      dbUser = new User({ name, email, password, college });
+      await dbUser.save();
+
+      token = jwt.sign(
+        { id: dbUser._id, email: dbUser.email, role: dbUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      user = {
+        id: dbUser._id,
+        name: dbUser.name,
+        email: dbUser.email,
+        role: dbUser.role,
+      };
+    } else {
+      // Use local auth
+      user = await registerLocalUser(name, email, password, college);
+      token = generateToken(user);
     }
-
-    // Create new user
-    user = new User({ name, email, password, college });
-    await user.save();
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
 
     res.status(201).json({
       message: 'User registered successfully',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user,
+      usingLocalAuth: !isMongoConnected
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Register error:', error.message);
+    res.status(500).json({
+      message: error.message || 'An error occurred during registration',
+      error: error.message
+    });
   }
 });
 
@@ -56,37 +83,51 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
-    // Check if user exists
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+    let token, user;
+    const isMongoConnected = mongoose.connection.readyState === 1;
 
-    // Check password
-    const isPasswordCorrect = await user.comparePassword(password);
-    if (!isPasswordCorrect) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
+    if (isMongoConnected) {
+      // Use MongoDB
+      const dbUser = await User.findOne({ email }).select('+password');
+      if (!dbUser) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+      const isPasswordCorrect = await dbUser.comparePassword(password);
+      if (!isPasswordCorrect) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      token = jwt.sign(
+        { id: dbUser._id, email: dbUser.email, role: dbUser.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      user = {
+        id: dbUser._id,
+        name: dbUser.name,
+        email: dbUser.email,
+        role: dbUser.role,
+      };
+    } else {
+      // Use local auth
+      user = await loginLocalUser(email, password);
+      token = generateToken(user);
+    }
 
     res.status(200).json({
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user,
+      usingLocalAuth: !isMongoConnected
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Login error:', error.message);
+    res.status(401).json({
+      message: error.message || 'Invalid credentials',
+      error: error.message
+    });
   }
 });
 
@@ -98,11 +139,29 @@ router.get('/me', async (req, res) => {
       return res.status(401).json({ message: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id);
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      return res.status(401).json({ message: 'Invalid token' });
+    }
+
+    const isMongoConnected = mongoose.connection.readyState === 1;
+    let user;
+
+    if (isMongoConnected) {
+      user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+    } else {
+      user = getLocalUser(decoded.email);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+    }
 
     res.status(200).json({ user });
   } catch (error) {
+    console.error('Auth error:', error.message);
     res.status(401).json({ message: 'Invalid token' });
   }
 });

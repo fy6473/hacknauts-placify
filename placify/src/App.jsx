@@ -29,9 +29,11 @@ function AppRoutes() {
       <Route path="/contact" element={<ContactPage />} />
 
       {/* Protected Routes */}
+      <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/company/:companyName" element={<ProtectedRoute><CompanyDetailPage /></ProtectedRoute>} />
       <Route path="/company/:companyName/aptitude" element={<ProtectedRoute><AptitudeTestPage /></ProtectedRoute>} />
       <Route path="/company/:companyName/technical" element={<ProtectedRoute><TechnicalTestPage /></ProtectedRoute>} />
+      <Route path="/technical" element={<ProtectedRoute><TechnicalTestPage /></ProtectedRoute>} />
       <Route path="/company/:companyName/communication" element={<ProtectedRoute><ReadingTestPage /></ProtectedRoute>} />
       <Route path="/results/:companyName/:roundType" element={<ProtectedRoute><ResultPage /></ProtectedRoute>} />
 
